@@ -10,6 +10,9 @@ import bcrypt
 API_KEY = '3fd2be6f0c70a2a598f084ddfb75487c'
 BASE_URL = 'https://api.themoviedb.org/3'
 
+# Rated Movies List
+rated_movies = []
+
 # SQLAlchemy setup
 Base = declarative_base()
 engine = create_engine('sqlite:///movie_db.sqlite')
@@ -107,7 +110,17 @@ def rate_movie():
     movie_id = input("Enter the movie ID: ")
     rating = input("Rate the movie (1-10): ")
 
-    # Implement your logic to rate the movie here
+    # Check if the movie with the given ID exists in the database
+    movie = session.query(Movie).filter_by(id=movie_id).first()
+
+    if not movie:
+        print(colored("Movie not found. Please enter a valid movie ID.", 'red'))
+        return
+
+    # Update the movie's rating in the database
+    movie.vote_average = float(rating)
+    session.commit()
+
     print(colored(f"Thank you for rating the movie! You gave it a rating of {rating} stars.", 'green'))
 
 # View Favorites Function
@@ -181,16 +194,41 @@ def recommend_best_movies():
         return
 
     best_movies = [
-        "Movie 1",
-        "Movie 2",
-        "Movie 3",
-        "Movie 4",
+        "The Shawshank Redemption",
+        "The Godfather",
+        "The Dark Knight",
+        "Pulp Fiction",
+        "Schindler's List",
+        "Forrest Gump",
+        "Fight Club",
+        "Inception",
+        "The Matrix",
+        "The Lord of the Rings: The Fellowship of the Ring",
+        "The Silence of the Lambs",
     ]
 
     print(colored("Recommended Best Movies:", 'cyan'))
     for i, movie in enumerate(best_movies, start=1):
         print(colored(f"{i}. {movie}", 'yellow'))
         print("---")
+
+# View Rated Movies Function
+def view_rated_movies():
+    if not login_user():
+        print(colored("You must log in to view your rated movies.", 'red'))
+        return
+
+    rated_movies = session.query(Movie).filter(Movie.vote_average.isnot(None)).all()
+
+    if not rated_movies:
+        print(colored("You haven't rated any movies yet.", 'yellow'))
+    else:
+        print(colored("Your Rated Movies:", 'cyan'))
+        for i, movie in enumerate(rated_movies, start=1):
+            print(colored(f"{i}. {movie.title} ({movie.release_date})", 'yellow'))
+            print(colored(f"Overview: {movie.overview}", 'magenta'))
+            print(colored(f"Vote Average: {movie.vote_average}", 'green'))
+            print("---")
 
 # Delete Favorite Function
 def delete_favorite():
@@ -246,6 +284,7 @@ def main():
     view_profile_parser = subparsers.add_parser('view-profile', help='View user\'s profile')
     recommend_best_parser = subparsers.add_parser('recommend-best', help='Recommend the best movies')
     delete_parser = subparsers.add_parser('delete', help='Delete a movie from favorites')
+    view_rated_parser = subparsers.add_parser('view-rated', help='View your rated movies')
 
     args = parser.parse_args()
 
@@ -269,6 +308,8 @@ def main():
         recommend_best_movies()
     elif args.command == 'delete':
         delete_favorite()
+    elif args.command == 'view-rated':
+        view_rated_movies()
 
 if __name__ == '__main__':
     main()
